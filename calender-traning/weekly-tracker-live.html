@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>週間タイムトラッカー</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0c0e12; --s:#13161d; --s2:#1a1e28; --bd:#252c3d;
+  --tx:#dde3f0; --mu:#5a647d; --ac:#4f8ce8; --gr:#43d9a2;
+  --ye:#e8c247; --re:#e85c7a; --pu:#9b6be8;
+  --ph:46px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--tx);font-family:'Noto Sans JP',sans-serif;min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 80% 50% at 20% 0%,rgba(79,140,232,.06),transparent 60%),
+             radial-gradient(ellipse 60% 40% at 80% 100%,rgba(67,217,162,.04),transparent 60%);}
+.wrap{position:relative;z-index:1;max-width:1360px;margin:0 auto;padding:20px 24px;}
+
+header{display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--bd);}
+.hl h1{font-family:'DM Mono',monospace;font-size:17px;font-weight:500;color:var(--ac);}
+.hl p{font-size:11px;color:var(--mu);margin-top:3px;}
+.hr{display:flex;gap:8px;align-items:center;}
+.wnav{display:flex;align-items:center;gap:6px;}
+.wnav button{background:var(--s2);border:1px solid var(--bd);color:var(--tx);
+  width:28px;height:28px;border-radius:7px;cursor:pointer;font-size:13px;
+  display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.wnav button:hover{background:var(--ac);border-color:var(--ac);}
+#wlbl{font-family:'DM Mono',monospace;font-size:12px;min-width:140px;text-align:center;}
+
+/* sync badge */
+.sync-info{display:flex;align-items:center;gap:7px;
+  background:rgba(67,217,162,.08);border:1px solid rgba(67,217,162,.2);
+  border-radius:8px;padding:8px 12px;margin-bottom:16px;font-size:11px;color:var(--mu);}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--gr);flex-shrink:0;}
+.sync-info strong{color:var(--gr);}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;}
+.sc{background:var(--s);border:1px solid var(--bd);border-radius:10px;padding:12px 16px;position:relative;overflow:hidden;}
+.sc::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--c);}
+.sl{font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px;}
+.sv{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:var(--c);}
+.ss{font-size:10px;color:var(--mu);margin-top:2px;}
+
+.layout{display:grid;grid-template-columns:1fr 272px;gap:15px;align-items:start;}
+
+.cal{background:var(--s);border:1px solid var(--bd);border-radius:14px;overflow:hidden;}
+.chdr{display:grid;grid-template-columns:52px repeat(7,1fr);background:var(--s2);border-bottom:1px solid var(--bd);}
+.dh{padding:9px 4px;text-align:center;font-size:10px;}
+.dh .dn{color:var(--mu);margin-bottom:2px;}
+.dh .dd{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;}
+.dh.today .dd{color:var(--ac);background:rgba(79,140,232,.15);border-radius:5px;padding:1px 5px;}
+.tgrid{display:grid;grid-template-columns:52px repeat(7,1fr);
+  max-height:480px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--bd) transparent;}
+.tl{padding:0 5px;font-family:'DM Mono',monospace;font-size:9px;color:var(--mu);
+  text-align:right;border-right:1px solid var(--bd);height:var(--ph);
+  display:flex;align-items:flex-start;padding-top:3px;}
+.tc{border-right:1px solid var(--bd);border-bottom:1px solid rgba(37,44,61,.6);
+  height:var(--ph);position:relative;cursor:pointer;transition:background .1s;}
+.tc:last-child{border-right:none;}
+.tc:hover{background:rgba(79,140,232,.05);}
+.eb{position:absolute;left:2px;right:2px;border-radius:5px;padding:3px 5px;
+  font-size:9px;overflow:hidden;z-index:2;border-left:3px solid var(--ec);transition:filter .15s;}
+.eb:hover{filter:brightness(1.15);z-index:10;}
+.et{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.em{opacity:.6;font-size:8px;margin-top:1px;font-family:'DM Mono',monospace;}
+.gcb{font-size:7px;background:rgba(79,140,232,.3);color:var(--ac);
+  border-radius:3px;padding:1px 3px;margin-left:3px;font-family:'DM Mono',monospace;vertical-align:middle;}
+.lcb{font-size:7px;background:rgba(232,194,71,.2);color:var(--ye);
+  border-radius:3px;padding:1px 3px;margin-left:3px;font-family:'DM Mono',monospace;vertical-align:middle;}
+
+.rp{display:flex;flex-direction:column;gap:13px;}
+.pc{background:var(--s);border:1px solid var(--bd);border-radius:12px;padding:14px;}
+.pt{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--mu);margin-bottom:11px;}
+
+.pie-wrap{display:flex;justify-content:center;margin-bottom:10px;}
+.catlist{display:flex;flex-direction:column;gap:6px;}
+.ci .cr{display:flex;justify-content:space-between;align-items:center;}
+.cn{display:flex;align-items:center;gap:6px;font-size:11px;}
+.cdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.ch{font-family:'DM Mono',monospace;font-size:10px;color:var(--mu);}
+.cbg{height:2px;background:var(--s2);border-radius:2px;overflow:hidden;margin-top:3px;}
+.cbar{height:100%;border-radius:2px;transition:width .5s;}
+
+.evlist{display:flex;flex-direction:column;gap:5px;max-height:220px;overflow-y:auto;
+  scrollbar-width:thin;scrollbar-color:var(--bd) transparent;}
+.ei{display:flex;gap:7px;align-items:flex-start;padding:8px 10px;
+  background:var(--s2);border-radius:7px;border-left:3px solid var(--ec);}
+.eit{font-size:11px;font-weight:500;}
+.eim{font-size:10px;color:var(--mu);font-family:'DM Mono',monospace;margin-top:1px;}
+.eidl{margin-left:auto;color:var(--mu);font-size:12px;opacity:.25;
+  flex-shrink:0;cursor:pointer;transition:all .15s;padding-left:4px;}
+.ei:hover .eidl{opacity:1;color:var(--re);}
+
+/* add form */
+.show-add{width:100%;padding:9px;background:transparent;border:1px dashed var(--bd);
+  border-radius:8px;color:var(--mu);cursor:pointer;font-size:11px;
+  font-family:'Noto Sans JP',sans-serif;transition:all .15s;
+  display:flex;align-items:center;justify-content:center;gap:5px;margin-top:8px;}
+.show-add:hover{border-color:var(--ac);color:var(--ac);background:rgba(79,140,232,.05);}
+.add-form{border:1px solid var(--bd);border-radius:9px;padding:13px;margin-top:8px;background:var(--s2);}
+.add-form.hidden{display:none;}
+.fg{margin-bottom:8px;}
+.fg label{display:block;font-size:10px;color:var(--mu);margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px;}
+.fg input,.fg select{width:100%;background:var(--s);border:1px solid var(--bd);
+  border-radius:6px;padding:7px 9px;color:var(--tx);
+  font-family:'Noto Sans JP',sans-serif;font-size:12px;outline:none;transition:border-color .15s;}
+.fg input:focus,.fg select:focus{border-color:var(--ac);}
+.fg select option{background:var(--s);}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.fbtns{display:flex;gap:7px;margin-top:10px;}
+.btn-save{flex:1;padding:9px;background:var(--ac);border:none;border-radius:7px;
+  color:white;font-size:12px;font-weight:600;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;transition:all .15s;}
+.btn-save:hover{background:#3d7ad6;}
+.btn-cancel{padding:9px 12px;background:transparent;border:1px solid var(--bd);
+  border-radius:7px;color:var(--mu);font-size:12px;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;transition:all .15s;}
+.btn-cancel:hover{border-color:var(--tx);color:var(--tx);}
+
+/* request panel */
+.req-panel{background:rgba(67,217,162,.06);border:1px solid rgba(67,217,162,.25);
+  border-radius:10px;padding:13px;margin-top:13px;}
+.req-panel.hidden{display:none;}
+.req-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+  color:var(--gr);margin-bottom:8px;}
+.req-body{font-family:'DM Mono',monospace;font-size:11px;color:var(--tx);
+  background:var(--s);border-radius:6px;padding:10px;line-height:1.7;
+  white-space:pre-wrap;word-break:break-all;margin-bottom:8px;}
+.req-note{font-size:10px;color:var(--mu);line-height:1.6;}
+.req-btns{display:flex;gap:7px;margin-top:9px;}
+.btn-copy{padding:7px 12px;background:var(--gr);border:none;border-radius:6px;
+  color:#0c0e12;font-size:11px;font-weight:700;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;}
+.btn-copy:hover{background:#35c990;}
+.btn-dismiss{padding:7px 10px;background:transparent;border:1px solid var(--bd);
+  border-radius:6px;color:var(--mu);font-size:11px;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;}
+.btn-dismiss:hover{color:var(--tx);border-color:var(--tx);}
+
+.ckl{display:flex;flex-direction:column;gap:5px;}
+.cki{display:flex;align-items:flex-start;gap:8px;padding:6px 0;
+  border-bottom:1px solid var(--bd);cursor:pointer;}
+.cki:last-child{border-bottom:none;}
+.ckb{width:14px;height:14px;border:2px solid var(--bd);border-radius:4px;
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  margin-top:1px;transition:all .15s;}
+.cki.done .ckb{background:var(--gr);border-color:var(--gr);}
+.cki.done .ckb::after{content:'✓';font-size:9px;font-weight:700;color:#0c0e12;}
+.cki.done .ckt{text-decoration:line-through;color:var(--mu);}
+.ckt{font-size:11px;}.cks{font-size:10px;color:var(--mu);margin-top:1px;}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(60px);
+  background:var(--s2);border:1px solid var(--bd);border-radius:10px;
+  padding:9px 16px;font-size:12px;z-index:200;transition:transform .25s;
+  pointer-events:none;white-space:nowrap;font-family:'DM Mono',monospace;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.ok{border-color:var(--gr);color:var(--gr);}
+.toast.info{border-color:var(--ac);color:var(--ac);}
+
+@media(max-width:860px){.layout{grid-template-columns:1fr;}.stats{grid-template-columns:repeat(2,1fr);}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="hl">
+      <h1>⏱ weekly tracker</h1>
+      <p>藤山誠二 — Google Calendar 同期済み</p>
+    </div>
+    <div class="hr">
+      <div class="wnav">
+        <button onclick="changeWeek(-1)">‹</button>
+        <span id="wlbl"></span>
+        <button onclick="changeWeek(1)">›</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="sync-info">
+    <div class="sync-dot"></div>
+    <span>最終同期：<strong id="syncTime"></strong> — このファイルにはGCalの最新データが反映されています。更新したい場合はClaudeに「HTMLを更新して」と依頼してください。</span>
+  </div>
+
+  <div class="stats">
+    <div class="sc" style="--c:var(--ac)">
+      <div class="sl">今週の合計</div><div class="sv" id="stT">0h</div><div class="ss" id="stC">0件</div>
+    </div>
+    <div class="sc" style="--c:#4f8ce8">
+      <div class="sl">会議・面談</div><div class="sv" id="stM">0h</div><div class="ss" id="stMp">—</div>
+    </div>
+    <div class="sc" style="--c:#43d9a2">
+      <div class="sl">集中作業</div><div class="sv" id="stF">0h</div><div class="ss" id="stFp">—</div>
+    </div>
+    <div class="sc" style="--c:var(--ye)">
+      <div class="sl">空き時間</div><div class="sv" id="stFr">0h</div><div class="ss">週40h想定</div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="cal">
+      <div class="chdr">
+        <div></div>
+        <div class="dh" id="dh0"><div class="dn">月</div><div class="dd" id="dd0"></div></div>
+        <div class="dh" id="dh1"><div class="dn">火</div><div class="dd" id="dd1"></div></div>
+        <div class="dh" id="dh2"><div class="dn">水</div><div class="dd" id="dd2"></div></div>
+        <div class="dh" id="dh3"><div class="dn">木</div><div class="dd" id="dd3"></div></div>
+        <div class="dh" id="dh4"><div class="dn">金</div><div class="dd" id="dd4"></div></div>
+        <div class="dh" id="dh5"><div class="dn">土</div><div class="dd" id="dd5"></div></div>
+        <div class="dh" id="dh6"><div class="dn">日</div><div class="dd" id="dd6"></div></div>
+      </div>
+      <div class="tgrid" id="tgrid"></div>
+    </div>
+
+    <div class="rp">
+      <div class="pc">
+        <div class="pt">カテゴリ別</div>
+        <div class="pie-wrap"><canvas id="pie" width="144" height="144"></canvas></div>
+        <div class="catlist" id="catlist"></div>
+      </div>
+      <div class="pc">
+        <div class="pt">イベント</div>
+        <div class="evlist" id="evlist"></div>
+        <button class="show-add" id="showAddBtn" onclick="toggleForm(true)">＋ ローカルにイベントを追加</button>
+        <div class="add-form hidden" id="addForm">
+          <div class="fg"><label>タイトル</label><input type="text" id="fT" placeholder="例：チームミーティング"></div>
+          <div class="fr">
+            <div class="fg"><label>曜日</label>
+              <select id="fD">
+                <option value="0">月</option><option value="1">火</option><option value="2">水</option>
+                <option value="3">木</option><option value="4">金</option><option value="5">土</option><option value="6">日</option>
+              </select>
+            </div>
+            <div class="fg"><label>カテゴリ</label>
+              <select id="fCa">
+                <option value="meeting">会議・面談</option><option value="focus">集中作業</option>
+                <option value="admin">管理業務</option><option value="personal">個人用</option>
+                <option value="learning">学習</option><option value="break">休憩</option>
+              </select>
+            </div>
+          </div>
+          <div class="fr">
+            <div class="fg"><label>開始</label><input type="time" id="fS" value="09:00"></div>
+            <div class="fg"><label>終了</label><input type="time" id="fE" value="10:00"></div>
+          </div>
+          <div class="fg"><label>メモ</label><input type="text" id="fN" placeholder="任意"></div>
+          <div class="fbtns">
+            <button class="btn-cancel" onclick="toggleForm(false)">キャンセル</button>
+            <button class="btn-save" onclick="saveLocalEvent()">保存</button>
+          </div>
+        </div>
+        <div class="req-panel hidden" id="reqPanel">
+          <div class="req-title">📋 Claudeへの依頼文</div>
+          <div class="req-body" id="reqBody"></div>
+          <div class="req-note">コピーしてチャットに貼り付けてください。ClaudeがGCalに反映＋HTMLを再生成します。</div>
+          <div class="req-btns">
+            <button class="btn-copy" onclick="copyReq()">コピー</button>
+            <button class="btn-dismiss" onclick="dismissReq()">閉じる</button>
+          </div>
+        </div>
+      </div>
+      <div class="pc">
+        <div class="pt">週間レビュー</div>
+        <div class="ckl" id="ckl"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── GCalから取得済みのイベントデータ（生成時: 2026-03-11）──
+const GCAL_EVENTS = [
+  {id:"1bcrhs4gtbh5i68tq2ofqstdnh",title:"面談",       start:"2026-03-11T10:45:00+09:00",end:"2026-03-11T11:45:00+09:00",category:"meeting"},
+  {id:"gohv5d0q1b0uqud72498n9d9vk",title:"テスト3",    start:"2026-03-11T12:00:00+09:00",end:"2026-03-11T16:00:00+09:00",category:"meeting"},
+  {id:"r1vdnv7mtud8ntp697dce07c54",title:"剣道",        start:"2026-03-13T11:00:00+09:00",end:"2026-03-13T11:30:00+09:00",category:"learning"},
+  {id:"3vvf6t91vp7k1tglatlm4396u4",title:"test 4",      start:"2026-03-13T12:00:00+09:00",end:"2026-03-13T18:00:00+09:00",category:"meeting"},
+];
+const GENERATED_AT = "2026-03-11T19:00:00+09:00";
+
+// ─────────────────────────────────────────────
+const CATS={
+  meeting:{label:'会議・面談',color:'#4f8ce8'},
+  focus:  {label:'集中作業',  color:'#43d9a2'},
+  admin:  {label:'管理業務',  color:'#e8c247'},
+  personal:{label:'個人用',   color:'#e85c7a'},
+  learning:{label:'学習',     color:'#9b6be8'},
+  break:  {label:'休憩',      color:'#5a647d'},
+};
+const TODAY=new Date(2026,2,11);
+const SH=7,EH=22,PX=46;
+let wOff=0;
+// GCalイベントをローカル形式に変換
+function gcalToLocal(ge){
+  const s=new Date(ge.start),e=new Date(ge.end);
+  return {
+    id:ge.id, gcalId:ge.id, title:ge.title,
+    day:s.toDateString(),
+    sh:s.getHours(),sm:s.getMinutes(),
+    eh:e.getHours(),em:e.getMinutes(),
+    category:ge.category||'meeting',note:'',fromGCal:true
+  };
+}
+// GCalイベント（固定）+ ローカル追加分を合算
+let gcalEvs = GCAL_EVENTS.map(gcalToLocal);
+let localEvs = JSON.parse(localStorage.getItem('wt6local')||'[]');
+let cks = new Set(JSON.parse(localStorage.getItem('wt6ck')||'[]'));
+let currentReq='';
+
+function allEvs(){ return [...gcalEvs,...localEvs]; }
+function saveLocal(){ try{localStorage.setItem('wt6local',JSON.stringify(localEvs));}catch(e){} }
+function saveCks(){ try{localStorage.setItem('wt6ck',JSON.stringify([...cks]));}catch(e){} }
+function pad(n){return String(n).padStart(2,'0');}
+function fmtH(h){return h>=1?`${h.toFixed(1)}h`:`${Math.round(h*60)}m`;}
+function dur(e){return(e.eh-e.sh)+(e.em-e.sm)/60;}
+
+function getWeek(off){
+  const d=new Date(TODAY),day=d.getDay();
+  d.setDate(d.getDate()-(day===0?6:day-1)+off*7);d.setHours(0,0,0,0);
+  return Array.from({length:7},(_,i)=>{const x=new Date(d);x.setDate(d.getDate()+i);return x;});
+}
+function toast(msg,type='',ms=2800){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className=`toast ${type} show`;
+  clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),ms);
+}
+function showReq(text){
+  currentReq=text;
+  document.getElementById('reqBody').textContent=text;
+  document.getElementById('reqPanel').classList.remove('hidden');
+}
+function dismissReq(){ document.getElementById('reqPanel').classList.add('hidden'); currentReq=''; }
+function copyReq(){
+  navigator.clipboard.writeText(currentReq)
+    .then(()=>toast('✅ コピーしました','ok'))
+    .catch(()=>{
+      const ta=document.createElement('textarea');ta.value=currentReq;
+      document.body.appendChild(ta);ta.select();document.execCommand('copy');
+      document.body.removeChild(ta);toast('✅ コピーしました','ok');
+    });
+}
+
+function toggleForm(show){
+  document.getElementById('addForm').classList.toggle('hidden',!show);
+  document.getElementById('showAddBtn').classList.toggle('hidden',show);
+  if(show){
+    const days=getWeek(wOff);
+    const ti=days.findIndex(d=>d.toDateString()===TODAY.toDateString());
+    document.getElementById('fD').value=ti>=0?ti:0;
+    setTimeout(()=>document.getElementById('fT').focus(),40);
+  }
+}
+
+function saveLocalEvent(){
+  const title=document.getElementById('fT').value.trim();
+  if(!title){document.getElementById('fT').focus();return;}
+  const di=parseInt(document.getElementById('fD').value);
+  const [sh,sm]=document.getElementById('fS').value.split(':').map(Number);
+  const [eh,em]=document.getElementById('fE').value.split(':').map(Number);
+  if(eh*60+em<=sh*60+sm){alert('終了時刻は開始時刻より後にしてください');return;}
+  const days=getWeek(wOff);
+  const day=days[di];
+  const cat=document.getElementById('fCa').value;
+  const note=document.getElementById('fN').value.trim();
+  const ev={id:'l'+Date.now(),gcalId:null,title,day:day.toDateString(),
+    sh,sm,eh,em,category:cat,note,fromGCal:false};
+  localEvs.push(ev);saveLocal();
+  toggleForm(false);
+  document.getElementById('fT').value='';document.getElementById('fN').value='';
+  render();
+  // Build request
+  const ymd=`${day.getFullYear()}-${pad(day.getMonth()+1)}-${pad(day.getDate())}`;
+  showReq([
+    `以下のイベントをGoogleカレンダーに追加して、HTMLも最新版に更新してください。`,
+    `タイトル：${title}`,
+    `日時：${ymd} ${pad(sh)}:${pad(sm)}〜${pad(eh)}:${pad(em)}（Asia/Tokyo）`,
+    `カテゴリ：${CATS[cat]?.label||cat}`,
+    note?`メモ：${note}`:'',
+  ].filter(Boolean).join('\n'));
+}
+
+function deleteEv(id){
+  const ev=allEvs().find(e=>e.id===id);
+  if(!ev||!confirm(`「${ev.title}」を削除しますか？`))return;
+  if(ev.fromGCal){
+    const req=`以下のイベントをGoogleカレンダーから削除して、HTMLも最新版に更新してください。\nイベントID：${ev.gcalId}\nタイトル：${ev.title}`;
+    showReq(req);
+  } else {
+    localEvs=localEvs.filter(e=>e.id!==id);saveLocal();render();
+    toast('✅ 削除しました');
+  }
+}
+
+function render(){
+  const days=getWeek(wOff);
+  const f=d=>`${d.getMonth()+1}/${d.getDate()}`;
+  document.getElementById('wlbl').textContent=`${f(days[0])} 〜 ${f(days[6])}`;
+  days.forEach((d,i)=>{
+    document.getElementById(`dd${i}`).textContent=d.getDate();
+    document.getElementById(`dh${i}`).classList.toggle('today',d.toDateString()===TODAY.toDateString());
+  });
+  // sync time
+  const gt=new Date(GENERATED_AT);
+  document.getElementById('syncTime').textContent=
+    `${gt.getMonth()+1}/${gt.getDate()} ${pad(gt.getHours())}:${pad(gt.getMinutes())}`;
+
+  const grid=document.getElementById('tgrid');grid.innerHTML='';
+  for(let h=SH;h<EH;h++){
+    const lbl=document.createElement('div');lbl.className='tl';lbl.textContent=`${pad(h)}:00`;
+    grid.appendChild(lbl);
+    days.forEach((d,di)=>{
+      const cell=document.createElement('div');cell.className='tc';
+      cell.onclick=()=>{
+        toggleForm(true);
+        document.getElementById('fD').value=di;
+        document.getElementById('fS').value=`${pad(h)}:00`;
+        document.getElementById('fE').value=`${pad(Math.min(h+1,EH-1))}:00`;
+      };
+      grid.appendChild(cell);
+    });
+  }
+
+  const wevs=allEvs().filter(e=>days.some(d=>d.toDateString()===e.day));
+  wevs.forEach(ev=>{
+    const di=days.findIndex(d=>d.toDateString()===ev.day);if(di<0)return;
+    const cells=grid.querySelectorAll('.tc');
+    const ci=(ev.sh-SH)*7+di;if(ci<0||ci>=cells.length)return;
+    const top=(ev.sm/60)*PX,height=Math.max(dur(ev)*PX-3,14);
+    const cat=CATS[ev.category]||CATS.meeting;
+    const blk=document.createElement('div');blk.className='eb';
+    blk.style.cssText=`--ec:${cat.color};background:${cat.color}1c;color:${cat.color};top:${top}px;height:${height}px;`;
+    const badge=ev.fromGCal?'<span class="gcb">GCal</span>':'<span class="lcb">local</span>';
+    blk.innerHTML=`<div class="et">${ev.title}${badge}</div>
+      <div class="em">${pad(ev.sh)}:${pad(ev.sm)}–${pad(ev.eh)}:${pad(ev.em)}</div>`;
+    blk.onclick=e=>{e.stopPropagation();deleteEv(ev.id);};
+    cells[ci].appendChild(blk);
+  });
+
+  updateStats(wevs);renderEvList(wevs);renderCats(wevs);drawPie(wevs);
+}
+
+function updateStats(wevs){
+  let tot=0,meet=0,foc=0;
+  wevs.forEach(e=>{const d=dur(e);tot+=d;if(e.category==='meeting')meet+=d;if(e.category==='focus')foc+=d;});
+  document.getElementById('stT').textContent=fmtH(tot);
+  document.getElementById('stC').textContent=`${wevs.length}件`;
+  document.getElementById('stM').textContent=fmtH(meet);document.getElementById('stMp').textContent=tot?`${Math.round(meet/tot*100)}%`:'—';
+  document.getElementById('stF').textContent=fmtH(foc);document.getElementById('stFp').textContent=tot?`${Math.round(foc/tot*100)}%`:'—';
+  document.getElementById('stFr').textContent=fmtH(Math.max(0,40-tot));
+}
+function getCatT(wevs){const t={};wevs.forEach(e=>{const d=dur(e);t[e.category]=(t[e.category]||0)+d;});return t;}
+function renderCats(wevs){
+  const t=getCatT(wevs),tot=Object.values(t).reduce((a,b)=>a+b,0)||1;
+  const el=document.getElementById('catlist');el.innerHTML='';
+  Object.entries(CATS).forEach(([k,c])=>{
+    const h=t[k]||0;if(!h)return;const pct=Math.round(h/tot*100);
+    el.innerHTML+=`<div class="ci"><div class="cr"><div class="cn"><div class="cdot" style="background:${c.color}"></div>${c.label}</div><div class="ch">${h.toFixed(1)}h·${pct}%</div></div><div class="cbg"><div class="cbar" style="width:${pct}%;background:${c.color}"></div></div></div>`;
+  });
+  if(!el.innerHTML)el.innerHTML='<div style="color:var(--mu);font-size:11px;text-align:center;padding:8px">データなし</div>';
+}
+function drawPie(wevs){
+  const cv=document.getElementById('pie'),ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height;ctx.clearRect(0,0,W,H);
+  const t=getCatT(wevs),tot=Object.values(t).reduce((a,b)=>a+b,0);
+  if(!tot){ctx.fillStyle='#252c3d';ctx.beginPath();ctx.arc(W/2,H/2,52,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#5a647d';ctx.font='11px Noto Sans JP';ctx.textAlign='center';ctx.fillText('データなし',W/2,H/2+4);return;}
+  let ang=-Math.PI/2;const cx=W/2,cy=H/2,r=58,inn=28;
+  Object.entries(CATS).forEach(([k,c])=>{
+    const v=t[k]||0;if(!v)return;const sl=(v/tot)*Math.PI*2;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,ang,ang+sl);ctx.closePath();
+    ctx.fillStyle=c.color;ctx.fill();ang+=sl;
+  });
+  ctx.beginPath();ctx.arc(cx,cy,inn,0,Math.PI*2);ctx.fillStyle='#13161d';ctx.fill();
+  ctx.fillStyle='#dde3f0';ctx.font='bold 13px DM Mono';ctx.textAlign='center';ctx.fillText(`${tot.toFixed(0)}h`,cx,cy+2);
+  ctx.fillStyle='#5a647d';ctx.font='9px Noto Sans JP';ctx.fillText('合計',cx,cy+13);
+}
+function renderEvList(wevs){
+  const el=document.getElementById('evlist');el.innerHTML='';
+  if(!wevs.length){el.innerHTML='<div style="color:var(--mu);font-size:11px;text-align:center;padding:10px">イベントなし</div>';return;}
+  const dns=['月','火','水','木','金','土','日'];
+  [...wevs].sort((a,b)=>{if(a.day<b.day)return-1;if(a.day>b.day)return 1;return(a.sh*60+a.sm)-(b.sh*60+b.sm);})
+  .forEach(ev=>{
+    const cat=CATS[ev.category]||CATS.meeting;
+    const d=new Date(ev.day),dn=dns[d.getDay()===0?6:d.getDay()-1];
+    const badge=ev.fromGCal?'<span class="gcb">GCal</span>':'<span class="lcb">local</span>';
+    el.innerHTML+=`<div class="ei" style="--ec:${cat.color}"><div><div class="eit">${ev.title}${badge}</div><div class="eim">${dn} ${pad(ev.sh)}:${pad(ev.sm)}–${pad(ev.eh)}:${pad(ev.em)} · ${cat.label}</div></div><span class="eidl" onclick="deleteEv('${ev.id}')">✕</span></div>`;
+  });
+}
+
+const CK=[
+  {id:'c1',text:'今週の会議を記録した',sub:'面談・ミーティングをすべて入力'},
+  {id:'c2',text:'集中作業の時間を振り返った',sub:'ディープワーク比率を確認'},
+  {id:'c3',text:'時間の無駄を1つ特定した',sub:'来週の改善ポイント'},
+  {id:'c4',text:'来週の予定をGCalに入れた',sub:'重要イベントを先に確保'},
+  {id:'c5',text:'休憩・回復時間を確保した',sub:'バランスを保つ'},
+];
+function renderCk(){
+  document.getElementById('ckl').innerHTML=CK.map(c=>`
+    <div class="cki ${cks.has(c.id)?'done':''}" onclick="toggleCk('${c.id}')">
+      <div class="ckb"></div><div><div class="ckt">${c.text}</div><div class="cks">${c.sub}</div></div>
+    </div>`).join('');
+}
+function toggleCk(id){cks.has(id)?cks.delete(id):cks.add(id);saveCks();renderCk();}
+function changeWeek(d){wOff+=d;render();}
+
+render();renderCk();
+setTimeout(()=>{document.getElementById('tgrid').scrollTop=(8-SH)*PX;},80);
+</script>
+</body>
+</html>
